@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rive Scroll Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #1a1a2e;
+      color: #eee;
+      font-family: sans-serif;
+    }
+
+    .spacer {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: #888;
+    }
+
+    .icon-section {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    canvas {
+      width: 300px;
+      height: 300px;
+      border-radius: 16px;
+      display: block;
+    }
+
+    .status {
+      font-size: 1rem;
+      color: #aaa;
+      letter-spacing: 0.05em;
+    }
+
+    .status span {
+      color: #5bc8f5;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="spacer">↓ Scroll down to see the animation ↓</div>
+
+  <section class="icon-section" id="icon-section">
+    <canvas id="rive-canvas" width="300" height="300"></canvas>
+    <p class="status">State: <span id="state-label">Loading…</span></p>
+  </section>
+
+  <div class="spacer">↑ Scroll back up ↑</div>
+
+  <script src="https://unpkg.com/@rive-app/canvas"></script>
+  <script>
+    // icon_ribbon.riv embedded as base64 — no server required
+    const RIV_BASE64 = "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";
+
+    function base64ToBuffer(b64) {
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    const label = document.getElementById('state-label');
+    let riveInstance;
+
+    riveInstance = new rive.Rive({
+      buffer: base64ToBuffer(RIV_BASE64),
+      canvas: document.getElementById('rive-canvas'),
+      stateMachines: 'State Machine 1',
+      autoplay: true,
+
+      onLoad() {
+        riveInstance.resizeDrawingSurfaceToCanvas();
+        const inputs = riveInstance.stateMachineInputs('State Machine 1');
+        console.log('[Rive] Loaded. Inputs:', inputs?.map(i => i.name));
+        label.textContent = 'Ready — scroll to trigger';
+        setupObserver();
+      },
+
+      onLoadError(err) {
+        console.error('[Rive] Load error:', err);
+        label.textContent = 'Load error — check console';
+      }
+    });
+
+    function getInput(name) {
+      return riveInstance
+        ?.stateMachineInputs('State Machine 1')
+        ?.find(i => i.name === name);
+    }
+
+    function setupObserver() {
+      const section = document.getElementById('icon-section');
+      let currentStage = 0; // 0=initial, 1=stage1, 2=stage2
+
+      function checkPosition() {
+        const rect = section.getBoundingClientRect();
+        const vh = window.innerHeight;
+        const centerPct = (rect.top + rect.height / 2) / vh;
+
+        if (centerPct > 0.2 && centerPct < 0.8) {
+          // Icon center in middle 60% → animate in
+          if (currentStage !== 2) {
+            currentStage = 2;
+            getInput('Trigger_Stage2')?.fire();
+            label.textContent = 'On Screen → Stage 2 (Final)';
+          }
+        } else if (currentStage === 2) {
+          // Icon center in top/bottom 20% → animate back
+          currentStage = 1;
+          getInput('Trigger_Stage1')?.fire();
+          label.textContent = 'Leaving → Stage 1 (Start)';
+        }
+      }
+
+      window.addEventListener('scroll', checkPosition, { passive: true });
+    }
+  </script>
+</body>
+</html>
